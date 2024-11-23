@@ -31,12 +31,6 @@ let db = client.db(dbName);
 // Middleware for parsing JSON data
 app.use(express.json());
 
-// Middleware dynamically extracts collection name from URL
-app.param('collectionName', function(req, res, next, collectionName) {
-    req.collection = db.collection(collectionName);
-    return next();
-});
-
 // Logger middleware function
 const logger = (req, res, next) => {
     const timestamp = new Date().toISOString();
@@ -48,23 +42,23 @@ const logger = (req, res, next) => {
 app.use(logger);
 
 // Routes
-app.get('/Courses', (req, res) => {
-    res.send('List of courses');
-});
 
-app.post('/Orders', (req, res) => {
-    res.send('Order created');
-});
-
-app.get('/collections/:collectionName', async function(req, res, next) {
-    const collectionName = req.params.collectionName; // Get the collection name from URL parameters
+//Route to get courses from DB
+app.get('/getCourses', async (req, res) => {
     try {
-        const collection = db.collection(collectionName); // Access the correct collection using the dynamic name
-        const results = await collection.find({}).toArray(); // Perform the find operation and await the result
+        const collection = db.collection("Courses");
+        const results = await collection.find({}).toArray();
         res.json(results); // Send the results as a JSON response
     } catch (err) {
-        next(err); // In case of an error, pass it to the next middleware (error handler)
+        console.error("Error fetching courses:", err);
+        res.status(500).json({ error: 'Failed to fetch courses' }); // Send error response with status code
     }
+});
+
+
+//Route to save order to DB
+app.post('/saveOrder', (req, res) => {
+    res.send('Order created');
 });
 
 
