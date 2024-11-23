@@ -66,8 +66,41 @@ app.get('/getCourses', async (req, res) => {
 });
 
 // Route to save an order
-app.post('/saveOrder', (req, res) => {
-    res.send('Order created');
+app.post('/saveOrder', async (req, res) => {
+    try {
+        // Extract the order data from the request body
+        const { firstName, lastName, address, phoneNumber, email, lessons } = req.body;
+
+        // Validate the data
+        if (!firstName || !lastName || !address || !phoneNumber || !email || !lessons || lessons.length === 0) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        // Prepare the order object to insert
+        const newOrder = {
+            firstName,
+            lastName,
+            address,
+            phoneNumber,
+            email,
+            lessons,
+            createdAt: new Date()  // Add a timestamp when the order is created
+        };
+
+        // Insert the order into the "order" collection
+        const collection = db.collection('Orders');
+        const result = await collection.insertOne(newOrder);
+
+        // Respond with the inserted order data and success message
+        res.status(201).json({
+            message: 'Order created successfully',
+            orderId: result.insertedId,
+            order: newOrder
+        });
+    } catch (err) {
+        console.error("Error saving order:", err);
+        res.status(500).json({ error: 'Failed to save order' });
+    }
 });
 
 // Start the server on a specified port
