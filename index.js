@@ -20,9 +20,7 @@ const uri = `${dbPrefix}${dbUsername}:${dbPwd}${dbUrl}${dbParams}`;
 //Trying to connect to DB
 const client = new MongoClient(uri, {
     serverApi: ServerApiVersion.v1,
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    ssl: true, // Ensure SSL is enabled
+    ssl: true,
     retryWrites: true
 });
 
@@ -33,6 +31,7 @@ client.connect()
     .catch(err => {
         console.error('Failed to connect to MongoDB', err);
     });
+
 let db = client.db(dbName);
 
 // Middleware for parsing JSON data
