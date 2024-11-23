@@ -103,6 +103,34 @@ app.post('/saveOrder', async (req, res) => {
     }
 });
 
+// Route to update attributes of a course in the "Courses" collection
+app.put('/updateCourse/:id', async (req, res) => {
+    try {
+        const { id } = req.params; // Extract id from the URL parameters
+        const updates = req.body; // Get the fields to update from the request body
+
+        // Find the course by id and update its attributes
+        const collection = db.collection('Courses');
+        const result = await collection.updateOne(
+            { id: parseInt(id) },
+            { $set: updates } // Apply the updates
+        );
+
+        // Check if the course was found and updated
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ error: 'Course not found' });
+        }
+
+        res.json({
+            message: 'Course updated successfully',
+            updatedCourse: { id: parseInt(id), ...updates }
+        });
+    } catch (err) {
+        console.error("Error updating course:", err);
+        res.status(500).json({ error: 'Failed to update course' });
+    }
+});
+
 // Start the server on a specified port
 const PORT = process.env.PORT || 3000;  // Use environment port or default to 3000
 app.listen(PORT, () => {
