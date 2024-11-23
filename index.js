@@ -18,7 +18,14 @@ const dbParams = properties.get("db.params");
 const uri = `${dbPrefix}${dbUsername}:${dbPwd}${dbUrl}${dbParams}`;
 
 //Trying to connect to DB
-const client = new MongoClient(uri, { serverApi: ServerApiVersion.v1 });
+const client = new MongoClient(uri, {
+    serverApi: ServerApiVersion.v1,
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    ssl: true, // Ensure SSL is enabled
+    retryWrites: true
+});
+
 client.connect()
     .then(() => {
         console.log('MongoDB connected successfully');
@@ -63,7 +70,7 @@ app.post('/saveOrder', (req, res) => {
 
 
 // Start the server
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;  // Use the port from Render or default to 3000 locally
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
