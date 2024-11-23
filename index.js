@@ -21,8 +21,10 @@ const uri = `${dbPrefix}${dbUsername}:${dbPwd}${dbUrl}${dbParams}`;
 const client = new MongoClient(uri, {
     serverApi: ServerApiVersion.v1,
     ssl: true,
+    tls: true,
     retryWrites: true
 });
+
 
 client.connect()
     .then(() => {
