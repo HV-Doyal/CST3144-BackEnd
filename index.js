@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const propertiesReader = require("properties-reader");
 const { MongoClient, ServerApiVersion } = require("mongodb");
+const fs = require('fs');
 
 const app = express();
 
@@ -128,6 +129,37 @@ app.put('/updateCourse/:id', async (req, res) => {
     } catch (err) {
         console.error("Error updating course:", err);
         res.status(500).json({ error: 'Failed to update course' });
+    }
+});
+
+// Serve static files from the "public" directory
+app.use('/Assets', express.static(path.join(__dirname, 'public/Assets')));
+
+// Route to fetch an image path from the database for a course
+app.get('/getCourseImage/:id', async (req, res) => {
+    try {
+        const { id } = req.params; // Get the course ID from the URL
+        const collection = db.collection('Courses');
+
+        // Find the course by ID and get its image path
+        const course = await collection.findOne({ id: parseInt(id) });
+
+        if (!course || !course.image) {
+            return res.status(404).json({ error: 'Course or image not found' });
+        }
+
+        const imagePath = path.join(__dirname, 'public', course.image);
+
+        // Check if the image file exists
+        if (!fs.existsSync(imagePath)) {
+            return res.status(404).json({ error: 'Image file does not exist' });
+        }
+
+        // Send the image file as the response
+        res.sendFile(imagePath);
+    } catch (err) {
+        console.error('Error fetching course image:', err);
+        res.status(500).json({ error: 'Failed to fetch course image' });
     }
 });
 
