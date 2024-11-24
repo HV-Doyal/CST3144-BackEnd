@@ -178,14 +178,26 @@ app.get('/search', async (req, res) => {
     try {
         const collection = db.collection("Courses");
 
-        // Perform the search using a regular expression for case-insensitive matching
+        // Define search conditions
+        const searchConditions = [
+            { topic: { $regex: query, $options: 'i' } }, // Search for topic (string)
+            { location: { $regex: query, $options: 'i' } } // Search for location (string)
+        ];
+
+        // Check if the query can be parsed into a number for numeric fields
+        const numericQuery = parseInt(query);
+        if (!isNaN(numericQuery)) {
+            // If it's a valid number, search for price, spaces, and id (int fields)
+            searchConditions.push(
+                { price: numericQuery },
+                { spaces: numericQuery },
+                { id: numericQuery }
+            );
+        }
+
+        // Perform the search using the defined conditions
         const searchResults = await collection.find({
-            $or: [
-                { topic: { $regex: query, $options: 'i' } },
-                { location: { $regex: query, $options: 'i' } },
-                { price: { $regex: query, $options: 'i' } },
-                { spaces: { $regex: query, $options: 'i' } }
-            ]
+            $or: searchConditions
         }).toArray();
 
         res.json(searchResults); // Return the filtered results
