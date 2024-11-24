@@ -167,6 +167,34 @@ app.get('/getCourseImage/:id', async (req, res) => {
     }
 });
 
+// Route to handle search request
+app.get('/search', async (req, res) => {
+    const { query } = req.query; // Get the search query from the request parameters
+
+    if (!query) {
+        return res.status(400).json({ error: 'Search query is required' });
+    }
+
+    try {
+        const collection = db.collection("Courses");
+
+        // Perform the search using a regular expression for case-insensitive matching
+        const searchResults = await collection.find({
+            $or: [
+                { topic: { $regex: query, $options: 'i' } },
+                { location: { $regex: query, $options: 'i' } },
+                { price: { $regex: query, $options: 'i' } },
+                { spaces: { $regex: query, $options: 'i' } }
+            ]
+        }).toArray();
+
+        res.json(searchResults); // Return the filtered results
+    } catch (err) {
+        console.error('Error performing search:', err);
+        res.status(500).json({ error: 'Failed to perform search' });
+    }
+});
+
 // Start the server on a specified port
 const PORT = process.env.PORT || 3000;  // Use environment port or default to 3000
 app.listen(PORT, () => {
