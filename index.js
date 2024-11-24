@@ -1,3 +1,4 @@
+// Import required modules
 const express = require('express');
 const path = require('path');
 const propertiesReader = require("properties-reader");
@@ -5,14 +6,16 @@ const { MongoClient, ServerApiVersion } = require("mongodb");
 const fs = require('fs');
 const cors = require('cors');
 
+// Initialize the Express application
 const app = express();
 
 // Enable CORS
 app.use(cors());
 
+/* ------------------------------- MongoDB Setup ------------------------------- */
 // Load configuration from properties file
-let propertiesPath = path.resolve(__dirname, "conf/db.properties");
-let properties = propertiesReader(propertiesPath);
+const propertiesPath = path.resolve(__dirname, "conf/db.properties");
+const properties = propertiesReader(propertiesPath);
 
 // Retrieve database credentials from properties file
 const dbPrefix = properties.get("db.prefix");
@@ -25,7 +28,7 @@ const dbParams = properties.get("db.params");
 // Create the MongoDB connection URI
 const uri = `${dbPrefix}${dbUsername}:${dbPwd}${dbUrl}${dbParams}`;
 
-// MongoDB client setup with connection options
+// Setup MongoDB client with connection options
 const client = new MongoClient(uri, {
     serverApi: ServerApiVersion.v1,
     ssl: true,
@@ -33,47 +36,43 @@ const client = new MongoClient(uri, {
     retryWrites: true
 });
 
-// Connect to the database
+// Connect to MongoDB and handle connection success/failure
 client.connect()
-    .then(() => {
-        console.log('MongoDB connected successfully');
-    })
-    .catch(err => {
-        console.error('Failed to connect to MongoDB', err);
-    });
+    .then(() => console.log('MongoDB connected successfully'))
+    .catch(err => console.error('Failed to connect to MongoDB', err));
 
-// Access the database after successful connection
+// Access the database
 let db = client.db(dbName);
+
+/* ----------------------------- Middleware Setup ----------------------------- */
 
 // Middleware to parse JSON data from incoming requests
 app.use(express.json());
 
 // Logger middleware to log request details (timestamp, method, URL)
-const logger = (req, res, next) => {
+app.use((req, res, next) => {
     const timestamp = new Date().toISOString();
     console.log(`[${timestamp}] ${req.method} ${req.url}`);
     next();
-};
+});
 
-// Apply the logger middleware globally
-app.use(logger);
+/* ------------------------------- REST API Routes ------------------------------- */
 
-// Route to fetch all courses from the MongoDB database
+// Route: Fetch all courses from MongoDB
 app.get('/getCourses', async (req, res) => {
     try {
         const collection = db.collection("Courses");
-        const results = await collection.find({}).toArray();  // Retrieve all courses
-        res.json(results);  // Send courses as JSON response
+        const results = await collection.find({}).toArray(); // Retrieve all courses
+        res.json(results); // Send courses as JSON response
     } catch (err) {
         console.error("Error fetching courses:", err);
-        res.status(500).json({ error: 'Failed to fetch courses' });  // Send error response if fetching fails
+        res.status(500).json({ error: 'Failed to fetch courses' });
     }
 });
 
-// Route to save an order
+// Route: Save an order to the database
 app.post('/saveOrder', async (req, res) => {
     try {
-        // Extract the order data from the request body
         const { firstName, lastName, address, phoneNumber, email, lessons } = req.body;
 
         // Validate the data
@@ -81,7 +80,7 @@ app.post('/saveOrder', async (req, res) => {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        // Prepare the order object to insert
+        // Prepare and insert the order object
         const newOrder = {
             firstName,
             lastName,
@@ -89,14 +88,13 @@ app.post('/saveOrder', async (req, res) => {
             phoneNumber,
             email,
             lessons,
-            createdAt: new Date()  // Add a timestamp when the order is created
+            createdAt: new Date() // Timestamp for order creation
         };
 
-        // Insert the order into the "order" collection
         const collection = db.collection('Orders');
         const result = await collection.insertOne(newOrder);
 
-        // Respond with the inserted order data and success message
+        // Respond with the order ID and success message
         res.status(201).json({
             message: 'Order created successfully',
             orderId: result.insertedId,
@@ -108,17 +106,16 @@ app.post('/saveOrder', async (req, res) => {
     }
 });
 
-// Route to update attributes of a course in the "Courses" collection
+// Route: Update attributes of a course in the database
 app.put('/updateCourse/:id', async (req, res) => {
     try {
-        const { id } = req.params; // Extract id from the URL parameters
-        const updates = req.body; // Get the fields to update from the request body
+        const { id } = req.params;
+        const updates = req.body; // Fields to update
 
-        // Find the course by id and update its attributes
         const collection = db.collection('Courses');
         const result = await collection.updateOne(
-            { id: parseInt(id) },
-            { $set: updates } // Apply the updates
+            { id: parseInt(id) }, // Find by course ID
+            { $set: updates } // Apply updates
         );
 
         // Check if the course was found and updated
@@ -136,16 +133,13 @@ app.put('/updateCourse/:id', async (req, res) => {
     }
 });
 
-// Serve static files from the "public" directory
-app.use('/Assets', express.static(path.join(__dirname, 'public/Assets')));
-
-// Route to fetch an image path from the database for a course
+// Route: Serve course image based on its ID
 app.get('/getCourseImage/:id', async (req, res) => {
     try {
-        const { id } = req.params; // Get the course ID from the URL
+        const { id } = req.params;
         const collection = db.collection('Courses');
 
-        // Find the course by ID and get its image path
+        // Find the course and retrieve its image path
         const course = await collection.findOne({ id: parseInt(id) });
 
         if (!course || !course.image) {
@@ -159,17 +153,16 @@ app.get('/getCourseImage/:id', async (req, res) => {
             return res.status(404).json({ error: 'Image file does not exist' });
         }
 
-        // Send the image file as the response
-        res.sendFile(imagePath);
+        res.sendFile(imagePath); // Send the image file as the response
     } catch (err) {
         console.error('Error fetching course image:', err);
         res.status(500).json({ error: 'Failed to fetch course image' });
     }
 });
 
-// Route to handle search request
+// Route: Search courses by query
 app.get('/search', async (req, res) => {
-    const { query } = req.query; // Get the search query from the request parameters
+    const { query } = req.query;
 
     if (!query) {
         return res.status(400).json({ error: 'Search query is required' });
@@ -180,14 +173,13 @@ app.get('/search', async (req, res) => {
 
         // Define search conditions
         const searchConditions = [
-            { topic: { $regex: query, $options: 'i' } }, // Search for topic (string)
-            { location: { $regex: query, $options: 'i' } } // Search for location (string)
+            { topic: { $regex: query, $options: 'i' } },
+            { location: { $regex: query, $options: 'i' } }
         ];
 
-        // Check if the query can be parsed into a number for numeric fields
+        // Check if query is numeric and include numeric fields in the search
         const numericQuery = parseInt(query);
         if (!isNaN(numericQuery)) {
-            // If it's a valid number, search for price, spaces, and id (int fields)
             searchConditions.push(
                 { price: numericQuery },
                 { spaces: numericQuery },
@@ -195,20 +187,27 @@ app.get('/search', async (req, res) => {
             );
         }
 
-        // Perform the search using the defined conditions
+        // Perform the search
         const searchResults = await collection.find({
             $or: searchConditions
         }).toArray();
 
-        res.json(searchResults); // Return the filtered results
+        res.json(searchResults); // Return search results
     } catch (err) {
         console.error('Error performing search:', err);
         res.status(500).json({ error: 'Failed to perform search' });
     }
 });
 
-// Start the server on a specified port
-const PORT = process.env.PORT || 3000;  // Use environment port or default to 3000
+/* ------------------------------- Static Assets ------------------------------- */
+
+// Serve static files from the "public" directory
+app.use('/Assets', express.static(path.join(__dirname, 'public/Assets')));
+
+/* ------------------------------- Start Server ------------------------------- */
+
+// Define the port and start the server
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
