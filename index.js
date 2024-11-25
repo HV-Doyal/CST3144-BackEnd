@@ -5,12 +5,16 @@ const propertiesReader = require("properties-reader");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const fs = require('fs');
 const cors = require('cors');
+const morgan = require('morgan');
 
 // Initialize the Express application
 const app = express();
 
 // Enable CORS
 app.use(cors());
+
+// Use Morgan as a logger middleware
+app.use(morgan('tiny'));
 
 /* ------------------------------- MongoDB Setup ------------------------------- */
 // Load configuration from properties file
@@ -48,13 +52,6 @@ let db = client.db(dbName);
 
 // Middleware to parse JSON data from incoming requests
 app.use(express.json());
-
-// Logger middleware to log request details (timestamp, method, URL)
-app.use((req, res, next) => {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] ${req.method} ${req.url}`);
-    next();
-});
 
 /* ------------------------------- REST API Routes ------------------------------- */
 
